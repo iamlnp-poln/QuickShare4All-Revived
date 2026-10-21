@@ -1,0 +1,33 @@
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# Windows temporary files
+*.tmp
+*.bak
+
+# Editor and IDE directories
+.vscode/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Logs and scratch output
+*.log
+scratch/
+.system_generated/
+
+# Node.js
+node_modules/
+package-lock.json
+npm-debug.log*
+
+# Binaries and reverse-engineering dumps
+*.bin
+*.dmp
+*.pdb

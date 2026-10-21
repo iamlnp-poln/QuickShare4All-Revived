@@ -1,0 +1,16 @@
+Windows Registry Editor Version 5.00
+; Note: We recommend running `scripts\install_context_menu.ps1` instead of this .reg file,
+; as the PowerShell script automatically detects your repository path and Samsung Quick Share icon.
+; If you prefer manual registry import, replace "C:\\PATH\\TO" with your actual path to this repo.
+
+[HKEY_CURRENT_USER\Software\Classes\*\shell\SamsungQuickShare]
+@="Share with Quick Share"
+
+[HKEY_CURRENT_USER\Software\Classes\*\shell\SamsungQuickShare\command]
+@="wscript.exe \"C:\\PATH\\TO\\QuickShare4All\\scripts\\send_to_quickshare.vbs\" \"%1\""
+
+[HKEY_CURRENT_USER\Software\Classes\Directory\shell\SamsungQuickShare]
+@="Share with Quick Share"
+
+[HKEY_CURRENT_USER\Software\Classes\Directory\shell\SamsungQuickShare\command]
+@="wscript.exe \"C:\\PATH\\TO\\QuickShare4All\\scripts\\send_to_quickshare.vbs\" \"%1\""
