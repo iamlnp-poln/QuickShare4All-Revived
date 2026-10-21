@@ -6,6 +6,9 @@
 
 A lightweight enabler and Windows Explorer Context Menu integration for **Samsung Quick Share** on non-Samsung PCs (Dell, HP, Lenovo, ASUS, Acer, custom builds, etc.).
 
+> **Tâm sự mỏng**:  
+> *"t làm bằng antigravity. t ngu code. t chỉ cần nó chạy. bây h nó chạy đc nên t share. đừng hỏi j hết"*
+
 ---
 
 ## 📖 Background & Problem
