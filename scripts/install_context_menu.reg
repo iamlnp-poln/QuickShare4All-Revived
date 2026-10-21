@@ -7,10 +7,10 @@ Windows Registry Editor Version 5.00
 @="Share with Quick Share"
 
 [HKEY_CURRENT_USER\Software\Classes\*\shell\SamsungQuickShare\command]
-@="wscript.exe \"C:\\PATH\\TO\\QuickShare4All\\scripts\\send_to_quickshare.vbs\" \"%1\""
+@="wscript.exe \"C:\\PATH\\TO\\QuickShare4All-Revived\\scripts\\send_to_quickshare.vbs\" \"%1\""
 
 [HKEY_CURRENT_USER\Software\Classes\Directory\shell\SamsungQuickShare]
 @="Share with Quick Share"
 
 [HKEY_CURRENT_USER\Software\Classes\Directory\shell\SamsungQuickShare\command]
-@="wscript.exe \"C:\\PATH\\TO\\QuickShare4All\\scripts\\send_to_quickshare.vbs\" \"%1\""
+@="wscript.exe \"C:\\PATH\\TO\\QuickShare4All-Revived\\scripts\\send_to_quickshare.vbs\" \"%1\""
