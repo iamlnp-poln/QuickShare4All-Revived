@@ -6,7 +6,9 @@
 [![Platform](https://img.shields.io/badge/Platform-Windows%2010%20%7C%2011-0078D6.svg)](https://microsoft.com)
 [![PowerShell](https://img.shields.io/badge/PowerShell-5.1%20%7C%207%2B-5391FE.svg)](https://github.com/PowerShell/PowerShell)
 
-A lightweight enabler and Windows Explorer Context Menu integration for **Samsung Quick Share** on non-Samsung PCs (Dell, HP, Lenovo, ASUS, Acer, custom desktops, etc.).
+A dual-purpose toolkit designed to fix the two biggest limitations of Quick Share on Windows:
+1. **Samsung Quick Share**: Enables the official app on **non-Galaxy Book devices** (Dell, HP, Lenovo, ASUS, Acer, custom desktops, etc.).
+2. **Google Quick Share**: Restores the missing right-click **"Send with Quick Share" Explorer Context Menu** on standard Windows 10 & 11 installations.
 
 > [!NOTE]
 > **Author's Note**:  
@@ -14,26 +16,26 @@ A lightweight enabler and Windows Explorer Context Menu integration for **Samsun
 
 ---
 
-## 📖 Background & Problem
+## 📖 The Problem: A Tale of Two Quick Shares
 
-On Windows, Quick Share exists in two separate editions:
+On Windows, Quick Share exists in two distinct ecosystems, each with its own frustrating drawback:
 
-| Feature | Samsung Quick Share | Google Quick Share |
-| :--- | :--- | :--- |
-| **Hardware Restriction** | 🔒 Historically locked to Samsung Galaxy Books | 🔓 Works on all Windows PCs |
-| **Context Menu ("Share with")** | ✅ Native Explorer integration | ❌ Missing on standard installs |
-| **ShareTarget API** | ✅ Fully supported | ❌ Registration issues on Windows 11 |
+| Edition | Compatibility | Context Menu ("Send with Quick Share") | The Problem |
+| :--- | :--- | :--- | :--- |
+| **Samsung Quick Share** | 🔒 **Galaxy Books Only** | ✅ Native (when supported) | Artificially locked to Samsung laptops; crashes/blocks on third-party PCs. |
+| **Google Quick Share** | 🔓 **All Windows PCs** | ❌ **Missing on standard setups** | Sparse package/MSIX signature issues prevent Windows from registering the right-click menu. |
 
-Previous community workarounds (e.g., the original `QuickShare4All` or `GalaxyBookMask`) relied on spoofing BIOS registry values (`SystemManufacturer` / `SystemProductName`). With Samsung Quick Share **v2.3+**, Samsung shifted hardware verification to the modern Windows App SDK `EasClientDeviceInformation` API, rendering all registry-spoofing techniques obsolete.
-
-Through non-destructive reverse engineering with [REA (Reverse Engineer Anything)](https://github.com/morluto/rea), we discovered an internal developer override switch embedded directly inside Samsung's binaries, alongside the proprietary URI scheme used to trigger file transfers from File Explorer.
+**QuickShare4All Revived** provides native, non-destructive solutions for both.
 
 ---
 
-## 🔍 Reverse Engineering Findings
+## 🛠️ Toolkits Included
 
-### 1. The Undocumented Non-Samsung PC Bypass
-Disassembling `QuickShareCore.dll` and `QuickShare.dll` revealed the verification routine inside `QSSystray.Utility.Helper.DeviceModelSupportChecker`:
+### 1. 🔓 Samsung Quick Share Enabler (For Non-Galaxy Book Devices)
+Historically, Samsung restricted its Windows app (`SAMSUNGELECTRONICSCoLtd.SamsungQuickShare`) by checking BIOS strings (`SystemManufacturer`). Modern versions (**v2.3+**) upgraded to Windows App SDK `EasClientDeviceInformation` API, breaking old registry spoofs (`QuickShare4All` / `GalaxyBookMask`).
+
+#### The Discovery
+Disassembling `QuickShareCore.dll` and `QuickShare.dll` via [REA](https://github.com/morluto/rea) revealed an undocumented internal bypass in `QSSystray.Utility.Helper.DeviceModelSupportChecker`:
 
 ```csharp
 public static bool IsSamsungDevice()
@@ -48,52 +50,50 @@ public static bool IsSamsungDevice()
 
 public static bool IsNonSamsungDeviceSupported()
 {
-    // Checks for the existence of this configuration file:
     return File.Exists(Path.Combine(localStatePath, "QuickShare_Non_Samsung_support.config"));
 }
 ```
 
-> **The Solution**: Creating an empty file named `QuickShare_Non_Samsung_support.config` in the app's `LocalState` directory permanently triggers non-Samsung device mode—without patching binaries, altering code, or invalidating digital signatures!
-
-### 2. Explorer Context Menu URI Protocol
-Inspecting `ExplorerCommandVerb.dll` revealed the URI schema Windows Explorer uses to dispatch files to Quick Share:
-
-```
-quickshare://pc/send?fileList=<FilePath1><FilePath2>
-```
-- **Single file**: `quickshare://pc/send?fileList=C:\path\to\document.pdf`
-- **Multiple files**: Joined using the `<` delimiter.
+Placing `QuickShare_Non_Samsung_support.config` into the app's `LocalState` directory permanently triggers non-Samsung device mode—without binary modification or signature invalidation!
 
 ---
 
-## 🚀 Installation & Usage
+### 2. 🖱️ Google Quick Share Context Menu Enabler (For Windows 10 & 11)
+Google Quick Share runs on all PCs, but standard Windows users do not get a right-click **"Send with Quick Share"** option in File Explorer because Google distributes its shell extension (`nearby_share_context_menu.dll`) inside an unregistered sparse MSIX package.
 
-### Prerequisites
-1. Install **Samsung Quick Share** on your PC (from the Microsoft Store or via winget).
-2. Ensure both Wi-Fi and Bluetooth are turned on.
-
-### 1. Enable Quick Share on Your PC
-Open PowerShell and run:
-```powershell
-.\scripts\enable_samsung_quickshare.ps1
+Our script registers a clean, native per-user Windows shell context menu that directly calls:
 ```
-This script will automatically:
-- Locate the Samsung Quick Share AppX `LocalState` directory.
-- Generate `QuickShare_Non_Samsung_support.config`.
-- Start the background service and daemon process.
-
-### 2. Add "Share with Quick Share" to File Explorer
-To register the right-click context menu:
-```powershell
-.\scripts\install_context_menu.ps1
+"C:\Program Files\Google\NearbyShare\nearby_share_launcher.exe" "%1"
 ```
-You can now right-click any file or folder in File Explorer and choose **Share with Quick Share**.
+providing instantaneous, seamless right-click sending for any file or folder.
 
-### 3. Uninstall Context Menu
-To cleanly remove the context menu integration:
-```powershell
-.\scripts\uninstall_context_menu.ps1
-```
+---
+
+## 🚀 Usage Guide
+
+### Scenario A: You use Google Quick Share & want Right-Click Context Menu
+1. Ensure **Google Quick Share** is installed (`nearby_share.exe`).
+2. Open PowerShell and run:
+   ```powershell
+   .\scripts\install_google_context_menu.ps1
+   ```
+3. Right-click any file or folder in File Explorer and select **Send with Quick Share**.
+4. *(To remove later)*: `.\scripts\uninstall_google_context_menu.ps1`
+
+---
+
+### Scenario B: You want to run Samsung Quick Share on a Non-Samsung PC
+1. Install **Samsung Quick Share** from the Microsoft Store or via winget.
+2. Open PowerShell and run:
+   ```powershell
+   .\scripts\enable_samsung_quickshare.ps1
+   ```
+   *(This creates the trigger file in `LocalState` and launches the daemon).*
+3. *(Optional)*: If you also want a right-click Explorer context menu specifically for Samsung Quick Share:
+   ```powershell
+   .\scripts\install_samsung_context_menu.ps1
+   ```
+4. *(To remove Samsung context menu)*: `.\scripts\uninstall_samsung_context_menu.ps1`
 
 ---
 
@@ -102,23 +102,24 @@ To cleanly remove the context menu integration:
 ```text
 QuickShare4All-Revived/
 ├── scripts/
-│   ├── enable_samsung_quickshare.ps1    # Main enabler script
-│   ├── install_context_menu.ps1         # Registers right-click Explorer context menu
-│   ├── uninstall_context_menu.ps1       # Cleans up context menu entries
-│   ├── send_to_quickshare.vbs           # Silent background URI dispatcher
-│   ├── install_context_menu.reg         # Manual registry import template
-│   └── uninstall_context_menu.reg       # Manual registry cleanup
+│   ├── enable_samsung_quickshare.ps1        # Unlocks Samsung Quick Share on non-Galaxy Books
+│   ├── install_google_context_menu.ps1      # Adds right-click menu for Google Quick Share
+│   ├── uninstall_google_context_menu.ps1    # Removes Google Quick Share menu
+│   ├── install_samsung_context_menu.ps1     # Adds right-click menu for Samsung Quick Share
+│   ├── uninstall_samsung_context_menu.ps1   # Removes Samsung Quick Share menu
+│   ├── send_to_quickshare.vbs               # Silent URI dispatcher for Samsung Quick Share
+│   ├── install_google_context_menu.reg      # Manual registry template for Google
+│   └── install_samsung_context_menu.reg     # Manual registry template for Samsung
 ├── research/
-│   ├── disassemble_checker.ps1          # Disassembly tool for DeviceModelSupportChecker
-│   ├── dump_il.ps1                      # IL disassembly extraction
-│   ├── find_callers.ps1                 # Call graph tracer
-│   ├── inspect_checker_methods.ps1      # Reflection metadata inspector
-│   ├── inspect_driver_check.ps1         # Driver requirement verification
-│   └── inspect_verb.js                  # Explorer verb protocol inspector
+│   ├── disassemble_checker.ps1              # Disassembly tool for DeviceModelSupportChecker
+│   ├── dump_il.ps1                          # IL extraction tool
+│   ├── find_callers.ps1                     # Call graph tracer
+│   ├── inspect_checker_methods.ps1          # Reflection metadata inspector
+│   └── inspect_verb.js                      # Protocol verb inspector
 ├── .gitignore
 ├── LICENSE
-├── README.md                            # English documentation
-└── README.vi.md                         # Vietnamese documentation
+├── README.md                                # English documentation
+└── README.vi.md                             # Vietnamese documentation
 ```
 
 ---

@@ -6,7 +6,9 @@
 [![Platform](https://img.shields.io/badge/Platform-Windows%2010%20%7C%2011-0078D6.svg)](https://microsoft.com)
 [![PowerShell](https://img.shields.io/badge/PowerShell-5.1%20%7C%207%2B-5391FE.svg)](https://github.com/PowerShell/PowerShell)
 
-Bộ công cụ kích hoạt và tích hợp Menu chuột phải (Context Menu) cho **Samsung Quick Share** trên các dòng PC/Laptop không phải của Samsung (Dell, HP, Lenovo, ASUS, Acer, PC tự build,...).
+Bộ công cụ kép giải quyết triệt để 2 sự ức chế lớn nhất của Quick Share trên Windows:
+1. **Samsung Quick Share**: Kích hoạt ứng dụng chính chủ chạy mượt mà trên **các thiết bị không phải Galaxy Book** (Dell, HP, Lenovo, ASUS, Acer, PC tự ráp,...).
+2. **Google Quick Share**: Bổ sung tùy chọn chuột phải **"Send with Quick Share" trong File Explorer Context Menu** vốn bị thiếu trên các bản Windows 10 & 11 tiêu chuẩn.
 
 > [!NOTE]
 > **Tâm sự mỏng**:  
@@ -14,26 +16,26 @@ Bộ công cụ kích hoạt và tích hợp Menu chuột phải (Context Menu) 
 
 ---
 
-## 📖 Bối cảnh & Vấn đề
+## 📖 Bối cảnh: Câu chuyện 2 phiên bản Quick Share
 
-Trên hệ điều hành Windows hiện nay, tính năng Quick Share tồn tại dưới hai phiên bản khác nhau:
+Trên Windows, Quick Share tồn tại dưới hai phiên bản độc lập do Samsung và Google phát hành, nhưng bản nào cũng có "hạt sạn" riêng:
 
-| Tính năng | Samsung Quick Share | Google Quick Share |
-| :--- | :--- | :--- |
-| **Giới hạn phần cứng** | 🔒 Bị khóa độc quyền cho dòng Samsung Galaxy Book | 🔓 Hoạt động trên mọi dòng máy Windows |
-| **Menu ngữ cảnh ("Share with")** | ✅ Tích hợp sẵn chuột phải trên File Explorer | ❌ Không có sẵn trên các bản cài tiêu chuẩn |
-| **Hỗ trợ ShareTarget API** | ✅ Đầy đủ | ❌ Hay gặp lỗi đăng ký trên Windows 11 |
+| Phiên bản | Khả năng tương thích | Menu chuột phải ("Send with Quick Share") | Vấn đề cốt lõi |
+| :--- | :--- | :--- | :--- |
+| **Samsung Quick Share** | 🔒 **Chỉ Galaxy Book** | ✅ Có sẵn (nếu là Galaxy Book) | Bị Samsung khóa cứng phần cứng; chặn không cho máy hãng khác chạy. |
+| **Google Quick Share** | 🔓 **Mọi PC Windows** | ❌ **Bị thiếu trên máy thường** | Gói MSIX sparse package bị lỗi chứng chỉ/đăng ký khiến Windows không hiện menu chuột phải. |
 
-Trước đây, cộng đồng từng sử dụng các script như `QuickShare4All` hoặc `GalaxyBookMask` nhằm làm giả (spoof) thông tin nhà sản xuất trong Registry BIOS (`SystemManufacturer` / `SystemProductName`). Tuy nhiên, từ phiên bản **v2.3+**, Samsung đã chuyển sang kiểm tra phần cứng bằng API hiện đại `EasClientDeviceInformation` của Windows App SDK, khiến toàn bộ các phương pháp fake Registry trước đó hoàn toàn vô tác dụng.
-
-Bằng phương pháp kỹ thuật đảo ngược (reverse engineering) an toàn thông qua [REA (Reverse Engineer Anything)](https://github.com/morluto/rea), chúng tôi đã phát hiện ra một công tắc nội bộ do chính lập trình viên của Samsung để lại bên trong mã nguồn, cùng với cấu trúc giao thức URI mà Windows Explorer dùng để gửi file.
+**QuickShare4All Revived** cung cấp giải pháp an toàn, không can thiệp mã nhị phân cho cả hai vấn đề trên.
 
 ---
 
-## 🔍 Phát hiện Kỹ thuật Đảo ngược
+## 🛠️ Chi tiết 2 bộ công cụ
 
-### 1. "Cửa sau" mở khóa PC không phải Samsung
-Khi phân tích và dịch ngược hai thư viện `QuickShareCore.dll` và `QuickShare.dll`, chúng tôi tìm thấy quy trình kiểm tra nằm trong lớp `QSSystray.Utility.Helper.DeviceModelSupportChecker`:
+### 1. 🔓 Kích hoạt Samsung Quick Share trên máy không phải Galaxy Book
+Trước đây, Samsung chặn máy hãng khác bằng cách kiểm tra BIOS Registry (`SystemManufacturer`). Các phiên bản mới (**v2.3+**) đã nâng cấp lên kiểm tra qua API `EasClientDeviceInformation` của Windows App SDK, khiến các script cũ (`QuickShare4All` / `GalaxyBookMask`) bị vô hiệu hóa hoàn toàn.
+
+#### Phát hiện kỹ thuật đảo ngược
+Phân tích `QuickShareCore.dll` và `QuickShare.dll` bằng [REA](https://github.com/morluto/rea) đã phát hiện ra cơ chế "cửa sau" mà chính lập trình viên Samsung để lại trong `QSSystray.Utility.Helper.DeviceModelSupportChecker`:
 
 ```csharp
 public static bool IsSamsungDevice()
@@ -41,84 +43,83 @@ public static bool IsSamsungDevice()
     if (IsNonSamsungDeviceSupported())
     {
         LogHandler.LogMessage("All devices including non-Samsung, are supported.");
-        return true; // Vượt qua hoàn toàn bước kiểm tra nhà sản xuất Samsung!
+        return true; // Bỏ qua hoàn toàn việc kiểm tra máy Samsung!
     }
     return EasClientDeviceInformation.get_SystemManufacturer().ToLower().Contains("samsung");
 }
 
 public static bool IsNonSamsungDeviceSupported()
 {
-    // Kiểm tra sự tồn tại của file cấu hình này:
     return File.Exists(Path.Combine(localStatePath, "QuickShare_Non_Samsung_support.config"));
 }
 ```
 
-> **Giải pháp**: Chỉ cần tạo một file rỗng mang tên `QuickShare_Non_Samsung_support.config` đặt vào thư mục `LocalState` của ứng dụng, Quick Share sẽ tự động chuyển sang chế độ hỗ trợ tất cả các thiết bị—hoàn toàn không cần vá mã nhị phân, không chỉnh sửa file hệ thống và không làm mất chữ ký số gốc của Samsung!
-
-### 2. Giao thức URI kích hoạt chia sẻ từ chuột phải
-Phân tích thư viện `ExplorerCommandVerb.dll` giúp phục hồi cú pháp URI mà File Explorer sử dụng để gửi danh sách tệp trực tiếp đến Quick Share:
-
-```
-quickshare://pc/send?fileList=<ĐườngDẫnFile1><ĐườngDẫnFile2>
-```
-- **Gửi 1 file**: `quickshare://pc/send?fileList=C:\duong-dan\tai-lieu.pdf`
-- **Gửi nhiều file**: Nối tiếp nhau bằng ký tự `<`.
+Chỉ cần tạo file `QuickShare_Non_Samsung_support.config` trong thư mục `LocalState` của ứng dụng, Samsung Quick Share sẽ tự động chuyển sang chế độ hỗ trợ mọi dòng máy—không cần patch file, không làm mất chữ ký số!
 
 ---
 
-## 🚀 Cài đặt & Sử dụng
+### 2. 🖱️ Kích hoạt Menu chuột phải cho Google Quick Share
+Bản Google Quick Share cài được trên mọi máy Windows, nhưng người dùng thường **không có menu ngữ cảnh chuột phải** khi bấm vào file/thư mục. Nguyên nhân là Google đóng gói phần mở rộng shell (`nearby_share_context_menu.dll`) trong một gói sparse MSIX chưa được cấp chứng chỉ dev trên Windows tiêu chuẩn.
 
-### Yêu cầu trước khi cài
-1. Máy tính đã cài đặt **Samsung Quick Share** (tải qua Microsoft Store hoặc winget).
-2. Đã bật sẵn kết nối Wi-Fi và Bluetooth trên máy.
-
-### 1. Kích hoạt Quick Share cho máy tính của bạn
-Mở PowerShell và chạy lệnh:
-```powershell
-.\scripts\enable_samsung_quickshare.ps1
+Script của chúng tôi đăng ký trực tiếp menu ngữ cảnh chuẩn của Windows Explorer trỏ thẳng đến:
 ```
-Script sẽ tự động:
-- Xác định thư mục `LocalState` của Samsung Quick Share AppX trên máy bạn.
-- Tạo file kích hoạt `QuickShare_Non_Samsung_support.config`.
-- Khởi chạy tiến trình dịch vụ ngầm và giao diện Quick Share.
-
-### 2. Thêm tính năng "Share with Quick Share" vào chuột phải
-Để đăng ký menu ngữ cảnh trên File Explorer:
-```powershell
-.\scripts\install_context_menu.ps1
+"C:\Program Files\Google\NearbyShare\nearby_share_launcher.exe" "%1"
 ```
-Bây giờ bạn chỉ cần click chuột phải vào bất kỳ file hoặc thư mục nào trong File Explorer rồi chọn **Share with Quick Share**.
-
-### 3. Gỡ bỏ Menu chuột phải
-Nếu không muốn sử dụng menu chuột phải nữa, bạn có thể gỡ sạch sẽ bằng lệnh:
-```powershell
-.\scripts\uninstall_context_menu.ps1
-```
+Giúp bạn có thể click chuột phải vào bất kỳ tệp hoặc thư mục nào để bắn file qua Google Quick Share ngay lập tức!
 
 ---
 
-## 📂 Cấu trúc Dự án
+## 🚀 Hướng dẫn Sử dụng
+
+### Trường hợp A: Bạn dùng Google Quick Share & muốn có Menu chuột phải
+1. Đảm bảo máy đã cài đặt **Google Quick Share** (`nearby_share.exe`).
+2. Mở PowerShell và chạy:
+   ```powershell
+   .\scripts\install_google_context_menu.ps1
+   ```
+3. Chuột phải vào bất kỳ file hoặc thư mục nào và chọn **Send with Quick Share**.
+4. *(Nếu muốn gỡ bỏ)*: `.\scripts\uninstall_google_context_menu.ps1`
+
+---
+
+### Trường hợp B: Bạn muốn chạy Samsung Quick Share trên máy không phải Samsung
+1. Cài đặt **Samsung Quick Share** từ Microsoft Store hoặc winget.
+2. Mở PowerShell và chạy:
+   ```powershell
+   .\scripts\enable_samsung_quickshare.ps1
+   ```
+   *(Script sẽ tự tạo file config mở khóa trong `LocalState` và khởi động dịch vụ).*
+3. *(Tùy chọn)*: Nếu muốn thêm menu chuột phải riêng cho bản Samsung:
+   ```powershell
+   .\scripts\install_samsung_context_menu.ps1
+   ```
+4. *(Nếu muốn gỡ menu của Samsung)*: `.\scripts\uninstall_samsung_context_menu.ps1`
+
+---
+
+## 📂 Cấu trúc Thư mục
 
 ```text
 QuickShare4All-Revived/
 ├── scripts/
-│   ├── enable_samsung_quickshare.ps1    # Script kích hoạt chính
-│   ├── install_context_menu.ps1         # Đăng ký menu chuột phải File Explorer
-│   ├── uninstall_context_menu.ps1       # Gỡ bỏ menu chuột phải
-│   ├── send_to_quickshare.vbs           # Dispatcher gọi URI ngầm (không nháy cửa sổ console)
-│   ├── install_context_menu.reg         # File mẫu import Registry thủ công
-│   └── uninstall_context_menu.reg       # File xóa Registry thủ công
+│   ├── enable_samsung_quickshare.ps1        # Mở khóa Samsung Quick Share trên máy non-Galaxy Book
+│   ├── install_google_context_menu.ps1      # Thêm menu chuột phải cho Google Quick Share
+│   ├── uninstall_google_context_menu.ps1    # Gỡ menu chuột phải của Google Quick Share
+│   ├── install_samsung_context_menu.ps1     # Thêm menu chuột phải cho Samsung Quick Share
+│   ├── uninstall_samsung_context_menu.ps1   # Gỡ menu chuột phải của Samsung Quick Share
+│   ├── send_to_quickshare.vbs               # Script chuyển tiếp URI ngầm cho bản Samsung
+│   ├── install_google_context_menu.reg      # File Registry mẫu cho Google
+│   └── install_samsung_context_menu.reg     # File Registry mẫu cho Samsung
 ├── research/
-│   ├── disassemble_checker.ps1          # Công cụ dịch ngược DeviceModelSupportChecker
-│   ├── dump_il.ps1                      # Trích xuất mã byte IL
-│   ├── find_callers.ps1                 # Truy vết luồng gọi hàm
-│   ├── inspect_checker_methods.ps1      # Soi reflection metadata
-│   ├── inspect_driver_check.ps1         # Kiểm tra điều kiện driver
-│   └── inspect_verb.js                  # Phân tích giao thức verb Explorer
+│   ├── disassemble_checker.ps1              # Script dịch ngược DeviceModelSupportChecker
+│   ├── dump_il.ps1                          # Script trích xuất mã IL
+│   ├── find_callers.ps1                     # Truy vết luồng gọi hàm
+│   ├── inspect_checker_methods.ps1          # Soi reflection metadata
+│   └── inspect_verb.js                      # Phân tích verb protocol
 ├── .gitignore
 ├── LICENSE
-├── README.md                            # Tài liệu tiếng Anh
-└── README.vi.md                         # Tài liệu tiếng Việt
+├── README.md                                # Tài liệu tiếng Anh
+└── README.vi.md                             # Tài liệu tiếng Việt
 ```
 
 ---

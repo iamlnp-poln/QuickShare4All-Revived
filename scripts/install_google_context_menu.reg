@@ -1,0 +1,17 @@
+Windows Registry Editor Version 5.00
+
+; Register "Send with Quick Share" for Google Quick Share in Windows File Explorer context menu
+
+[HKEY_CURRENT_USER\Software\Classes\*\shell\GoogleQuickShare]
+@="Send with Quick Share"
+"Icon"="C:\\Program Files\\Google\\NearbyShare\\nearby_share.exe"
+
+[HKEY_CURRENT_USER\Software\Classes\*\shell\GoogleQuickShare\command]
+@="\"C:\\Program Files\\Google\\NearbyShare\\nearby_share_launcher.exe\" \"%1\""
+
+[HKEY_CURRENT_USER\Software\Classes\Directory\shell\GoogleQuickShare]
+@="Send with Quick Share"
+"Icon"="C:\\Program Files\\Google\\NearbyShare\\nearby_share.exe"
+
+[HKEY_CURRENT_USER\Software\Classes\Directory\shell\GoogleQuickShare\command]
+@="\"C:\\Program Files\\Google\\NearbyShare\\nearby_share_launcher.exe\" \"%1\""
